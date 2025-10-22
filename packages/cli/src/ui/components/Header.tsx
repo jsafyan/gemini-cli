@@ -18,6 +18,24 @@ interface HeaderProps {
   nightly: boolean;
 }
 
+const ThemedLogo: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const gradient = theme.ui.gradient;
+
+  if (gradient && gradient.length >= 2) {
+    return (
+      <Gradient colors={gradient}>
+        <Text>{children}</Text>
+      </Gradient>
+    );
+  }
+
+  if (gradient && gradient.length === 1) {
+    return <Text color={gradient[0]}>{children}</Text>;
+  }
+
+  return <Text>{children}</Text>;
+};
+
 export const Header: React.FC<HeaderProps> = ({
   customAsciiArt,
   version,
@@ -47,22 +65,10 @@ export const Header: React.FC<HeaderProps> = ({
       flexShrink={0}
       flexDirection="column"
     >
-      {theme.ui.gradient ? (
-        <Gradient colors={theme.ui.gradient}>
-          <Text>{displayTitle}</Text>
-        </Gradient>
-      ) : (
-        <Text>{displayTitle}</Text>
-      )}
+      <ThemedLogo>{displayTitle}</ThemedLogo>
       {nightly && (
         <Box width="100%" flexDirection="row" justifyContent="flex-end">
-          {theme.ui.gradient ? (
-            <Gradient colors={theme.ui.gradient}>
-              <Text>v{version}</Text>
-            </Gradient>
-          ) : (
-            <Text>v{version}</Text>
-          )}
+          <ThemedLogo>v{version}</ThemedLogo>
         </Box>
       )}
     </Box>

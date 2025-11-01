@@ -47,6 +47,10 @@ vi.mock('./components/QuittingDisplay.js', () => ({
   QuittingDisplay: () => <Text>Quitting...</Text>,
 }));
 
+vi.mock('./components/HistoryItemDisplay.js', () => ({
+  HistoryItemDisplay: () => <Text>HistoryItemDisplay</Text>,
+}));
+
 vi.mock('./components/Footer.js', () => ({
   Footer: () => <Text>Footer</Text>,
 }));
@@ -65,6 +69,8 @@ describe('App', () => {
       clearItems: vi.fn(),
       loadHistory: vi.fn(),
     },
+    history: [],
+    pendingHistoryItems: [],
   };
 
   const mockConfig = makeFakeConfig();
@@ -110,6 +116,25 @@ describe('App', () => {
     const { lastFrame } = renderWithProviders(<App />, quittingUIState);
 
     expect(lastFrame()).toContain('Quitting...');
+  });
+
+  it('should render full history in alternate buffer mode when quittingMessages is set', () => {
+    const quittingUIState = {
+      ...mockUIState,
+      quittingMessages: [{ id: 1, type: 'user', text: 'test' }],
+      history: [{ id: 1, type: 'user', text: 'history item' }],
+      pendingHistoryItems: [{ type: 'user', text: 'pending item' }],
+    } as UIState;
+
+    mockLoadedSettings.merged.ui = { useAlternateBuffer: true };
+
+    const { lastFrame } = renderWithProviders(<App />, quittingUIState);
+
+    expect(lastFrame()).toContain('HistoryItemDisplay');
+    expect(lastFrame()).toContain('Quitting...');
+
+    // Reset settings
+    mockLoadedSettings.merged.ui = { useAlternateBuffer: false };
   });
 
   it('should render dialog manager when dialogs are visible', () => {

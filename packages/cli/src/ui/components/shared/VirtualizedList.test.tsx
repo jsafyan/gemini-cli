@@ -19,6 +19,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+vi.mock('../../contexts/KeypressContext.js', () => ({
+  useKeypressContext: () => ({
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
+  }),
+}));
+
+vi.mock('../../contexts/MouseContext.js', () => ({
+  useMouseContext: () => ({
+    subscribe: vi.fn(),
+    unsubscribe: vi.fn(),
+  }),
+}));
+
+vi.mock('../../contexts/ScrollProvider.js', () => ({
+  useScrollable: vi.fn(),
+}));
+
 describe('<VirtualizedList />', () => {
   const keyExtractor = (item: string) => item;
 

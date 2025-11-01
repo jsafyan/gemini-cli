@@ -18,6 +18,9 @@ import type React from 'react';
 import { theme } from '../../semantic-colors.js';
 
 import { type DOMElement, measureElement, Box } from 'ink';
+import { useScrollable } from '../../contexts/ScrollProvider.js';
+import { useAnimatedScrollbar } from '../../hooks/useAnimatedScrollbar.js';
+import { useKeypress, type Key } from '../../hooks/useKeypress.js';
 
 export const SCROLL_TO_ITEM_END = Number.MAX_SAFE_INTEGER;
 
@@ -29,6 +32,7 @@ type VirtualizedListProps<T> = {
   initialScrollIndex?: number;
   initialScrollOffsetInIndex?: number;
   scrollbarThumbColor?: string;
+  hasFocus?: boolean;
 };
 
 export type VirtualizedListRef<T> = {
@@ -76,6 +80,7 @@ function VirtualizedList<T>(
     keyExtractor,
     initialScrollIndex,
     initialScrollOffsetInIndex,
+    hasFocus = true,
   } = props;
   const dataRef = useRef(data);
   useEffect(() => {
@@ -363,23 +368,75 @@ function VirtualizedList<T>(
     }
   }
 
+  const internalScrollBy = useCallback(
+    (delta: number) => {
+      if (delta < 0) {
+        setIsStickingToBottom(false);
+      }
+      const currentScrollTop = scrollTop;
+      const newScrollTop = Math.max(
+        0,
+        Math.min(
+          totalHeight - scrollableContainerHeight,
+          currentScrollTop + delta,
+        ),
+      );
+      setScrollAnchor(getAnchorForScrollTop(newScrollTop, offsets));
+    },
+    [
+      scrollTop,
+      totalHeight,
+      scrollableContainerHeight,
+      getAnchorForScrollTop,
+      offsets,
+    ],
+  );
+
+  const { scrollbarColor, flashScrollbar, scrollByWithAnimation } =
+    useAnimatedScrollbar(hasFocus, internalScrollBy);
+
+  useKeypress(
+    (key: Key) => {
+      if (key.shift) {
+        if (key.name === 'up') {
+          scrollByWithAnimation(-1);
+        }
+        if (key.name === 'down') {
+          scrollByWithAnimation(1);
+        }
+      }
+    },
+    { isActive: hasFocus },
+  );
+
+  const getScrollState = useCallback(
+    () => ({
+      scrollTop,
+      scrollHeight: totalHeight,
+      innerHeight: containerHeight,
+    }),
+    [scrollTop, totalHeight, containerHeight],
+  );
+
+  const hasFocusCallback = useCallback(() => hasFocus, [hasFocus]);
+
+  const scrollableEntry = useMemo(
+    () => ({
+      ref: containerRef as React.RefObject<DOMElement>,
+      getScrollState,
+      scrollBy: scrollByWithAnimation,
+      hasFocus: hasFocusCallback,
+      flashScrollbar,
+    }),
+    [getScrollState, scrollByWithAnimation, hasFocusCallback, flashScrollbar],
+  );
+
+  useScrollable(scrollableEntry, hasFocus && containerRef.current !== null);
+
   useImperativeHandle(
     ref,
     () => ({
-      scrollBy: (delta: number) => {
-        if (delta < 0) {
-          setIsStickingToBottom(false);
-        }
-        const currentScrollTop = scrollTop;
-        const newScrollTop = Math.max(
-          0,
-          Math.min(
-            totalHeight - scrollableContainerHeight,
-            currentScrollTop + delta,
-          ),
-        );
-        setScrollAnchor(getAnchorForScrollTop(newScrollTop, offsets));
-      },
+      scrollBy: internalScrollBy,
       scrollTo: (offset: number) => {
         setIsStickingToBottom(false);
         const newScrollTop = Math.max(
@@ -445,11 +502,7 @@ function VirtualizedList<T>(
         }
       },
       getScrollIndex: () => scrollAnchor.index,
-      getScrollState: () => ({
-        scrollTop,
-        scrollHeight: totalHeight,
-        innerHeight: containerHeight,
-      }),
+      getScrollState,
     }),
     [
       offsets,
@@ -458,8 +511,8 @@ function VirtualizedList<T>(
       getAnchorForScrollTop,
       data,
       scrollableContainerHeight,
-      scrollTop,
-      containerHeight,
+      internalScrollBy,
+      getScrollState,
     ],
   );
 
@@ -469,7 +522,9 @@ function VirtualizedList<T>(
       overflowY="scroll"
       overflowX="hidden"
       scrollTop={scrollTop}
-      scrollbarThumbColor={props.scrollbarThumbColor ?? theme.text.secondary}
+      scrollbarThumbColor={
+        scrollbarColor ?? props.scrollbarThumbColor ?? theme.text.secondary
+      }
       width="100%"
       height="100%"
       flexDirection="column"

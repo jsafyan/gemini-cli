@@ -546,7 +546,7 @@ export class RipGrepTool extends BaseDeclarativeTool<
           },
           path: {
             description:
-              "Directory or file to search. Relative paths are resolved against the current working directory. Defaults to current working directory ('.') if omitted.",
+              "Directory or file to search. Directories are searched recursively. Relative paths are resolved against current working directory. Defaults to current working directory ('.') if omitted.",
             type: 'string',
           },
           include: {
